@@ -4,52 +4,31 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 
-// 参考: http://www.boyet.com/Articles/LockfreeQueue.html
 namespace CommonLib.ThreadSafe
 {
-    internal static class SyncMethods
+    // 参考: http://www.boyet.com/Articles/LockfreeQueue.html
+    public sealed class LockFreeQueue<T>
     {
-        public static bool TryUpdate<T>(ref T location, T comparand, T newValue)
-            where T : class
+        private sealed class Node<U>
         {
-            return comparand == Interlocked.CompareExchange(ref location, newValue, comparand);
+            public Node<U> Next;
+            public U Item;
         }
 
-        public static bool IsMatch<T>(ref T location, T newValue)
-            where T : class
-        {
-            return newValue == Interlocked.CompareExchange(ref location, newValue, newValue);
-        }
-
-        public static bool IsNull<T>(ref T location)
-            where T : class
-        {
-            return null == Interlocked.CompareExchange(ref location, null, null);
-        }
-    }
-
-    internal class SingleLinkNode<T>
-    {
-        public SingleLinkNode<T> Next;
-        public T Item;
-    }
-
-    public class LockFreeQueue<T>
-    {
-        SingleLinkNode<T> head;
-        SingleLinkNode<T> tail;
+        Node<T> head;
+        Node<T> tail;
 
         public LockFreeQueue()
         {
-            this.head = new SingleLinkNode<T>();
+            this.head = new Node<T>();
             this.tail = this.head;
         }
 
         public void Enqueue(T item)
         {
-            SingleLinkNode<T> oldTail = null;
-            SingleLinkNode<T> oldNext = null;
-            var node = new SingleLinkNode<T>();
+            Node<T> oldTail = null;
+            Node<T> oldNext = null;
+            var node = new Node<T>();
             node.Item = item;
 
             var updatedNewLink = false;

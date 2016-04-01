@@ -41,6 +41,7 @@
     <Compile Include="Command\ExampleCommand.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ThreadSafe\LockFreeQueue.cs" />
+    <Compile Include="ThreadSafe\SyncMethods.cs" />
     <Compile Include="ThreadSafe\ThreadSafeBoolean.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
