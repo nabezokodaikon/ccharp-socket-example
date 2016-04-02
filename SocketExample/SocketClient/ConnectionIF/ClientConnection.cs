@@ -90,7 +90,7 @@ namespace SocketClient.ConnectionIF
 
             try
             {
-                using (var tcp = new TcpClient())
+                using (var client = new TcpClient())
                 {
                     while (true)
                     {
@@ -98,7 +98,7 @@ namespace SocketClient.ConnectionIF
 
                         try
                         {
-                            tcp.Connect(host, port);
+                            client.Connect(host, port);
                         }
                         catch (SocketException ex)
                         {
@@ -109,17 +109,18 @@ namespace SocketClient.ConnectionIF
 
                         log.Debug("接続しました。");
 
-                        NetworkStream ns = null;
+                        NetworkStream stream = null;
+
                         try
                         {
-                            ns = tcp.GetStream();
+                            stream = client.GetStream();
                         }
                         catch (InvalidOperationException ex)
                         {
                             log.ErrorException("ネットワークストリームの取得に失敗しました。", ex);
-                            if (ns != null)
+                            if (stream != null)
                             {
-                                ns.Dispose();
+                                stream.Dispose();
                             }
 
                             Thread.Sleep(1000);
@@ -152,7 +153,7 @@ namespace SocketClient.ConnectionIF
                                     if (this.isShouldDisconnect.Value) return;
 
                                     var buffer = bin.Skip(0).Take(sendDataSize).ToArray();
-                                    ns.Write(buffer, 0, buffer.Length);
+                                    stream.Write(buffer, 0, buffer.Length);
                                     offset += buffer.Length;
 
                                     Thread.Sleep(1000);
@@ -161,7 +162,7 @@ namespace SocketClient.ConnectionIF
                             catch (IOException ex)
                             {
                                 log.ErrorException("コマンドの送信が失敗しました。", ex);
-                                ns.Dispose();
+                                stream.Dispose();
                                 break;
                             }
 
