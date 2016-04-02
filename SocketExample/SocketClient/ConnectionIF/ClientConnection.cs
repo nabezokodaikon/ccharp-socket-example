@@ -18,7 +18,6 @@ namespace SocketClient.ConnectionIF
         private Thread worker = null;
         private readonly ThreadSafeBoolean isShouldDisconnect = new ThreadSafeBoolean(false);
         private readonly LockFreeQueue<ExampleCommand> commandQueue = new LockFreeQueue<ExampleCommand>();
-        private readonly object syncLock = new object();
 
         public ClientConnection()
         {
@@ -27,54 +26,45 @@ namespace SocketClient.ConnectionIF
 
         public void Connect()
         {
-            lock (this.syncLock)
+            if (this.isConnecting())
             {
-                if (this.isConnecting())
-                {
-                    return;
-                }
+                return;
+            }
 
-                log.Debug("通信スレッドが開始します。");
+            log.Debug("通信スレッドが開始します。");
 
-                this.isShouldDisconnect.Value = false;
-                this.worker = new Thread(this.work);
-                this.worker.Start();
-                while (!this.worker.IsAlive)
-                {
-                    Thread.Sleep(0);
-                }
+            this.isShouldDisconnect.Value = false;
+            this.worker = new Thread(this.work);
+            this.worker.Start();
+            while (!this.worker.IsAlive)
+            {
+                Thread.Sleep(0);
             }
         }
 
         public void Disconnect()
         {
-            lock (this.syncLock)
+            if (!this.isConnecting())
             {
-                if (!this.isConnecting())
-                {
-                    return;
-                }
-
-                this.isShouldDisconnect.Value = true;
-                this.worker.Join();
-                this.worker = null;
-
-                log.Debug("通信スレッドが終了しました。");
+                return;
             }
+
+            this.isShouldDisconnect.Value = true;
+            this.worker.Join();
+            this.worker = null;
+
+            log.Debug("通信スレッドが終了しました。");
         }
 
         public void Send(string contents)
         {
-            lock (this.syncLock)
+            if (!this.isConnecting())
             {
-                if (!this.isConnecting())
-                {
-                    return;
-                }
-
-                var command = new ExampleCommand(contents);
-                this.commandQueue.Enqueue(command);
+                return;
             }
+
+            var command = new ExampleCommand(contents);
+            this.commandQueue.Enqueue(command);
         }
 
         private bool isConnecting()
