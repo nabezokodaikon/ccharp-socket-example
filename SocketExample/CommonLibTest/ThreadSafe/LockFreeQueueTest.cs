@@ -39,11 +39,24 @@ namespace CommonLibTest.ThreadSafe
             var srcQueue = new LockFreeQueue<Node>();
             var destQueue = new LockFreeQueue<Node>();
 
+            var threadStartFlagDic = new Dictionary<int, ThreadSafeBoolean>();
+            for (var i = 0; i < threadCount * 2; i++)
+            {
+                threadStartFlagDic.Add(i, new ThreadSafeBoolean(false));
+            }
+
             var threadList = new List<Thread>();
             for (var i = 0; i < threadCount; i++)
             {
-                var t = new Thread(() =>
+                threadList.Add(new Thread(obj =>
                 {
+                    var index = (int)obj;
+                    while (!threadStartFlagDic[index].Value)
+                    {
+                        Thread.Sleep(0);
+                        continue;
+                    }
+
                     var limit = nodeCount / threadCount;
                     var count = 0;
                     while (count < limit)
@@ -51,17 +64,21 @@ namespace CommonLibTest.ThreadSafe
                         var node = new Node(this.getNextIndex(), DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss.fff"));
                         srcQueue.Enqueue(node);
                         count++;
-                        Thread.Sleep(0);
                     }
-                });
-
-                threadList.Add(t);
+                }));
             }
 
             for (var i = 0; i < threadCount; i++)
             {
-                var t = new Thread(() =>
+                threadList.Add(new Thread(obj =>
                 {
+                    var index = (int)obj;
+                    while (!threadStartFlagDic[index].Value)
+                    {
+                        Thread.Sleep(0);
+                        continue;
+                    }
+
                     var limit = nodeCount / threadCount;
                     var count = 0;
                     while (count < limit)
@@ -72,28 +89,29 @@ namespace CommonLibTest.ThreadSafe
                             destQueue.Enqueue(node);
                             count++;
                         }
-                        
-                        Thread.Sleep(0);
                     }
-                });
-
-                threadList.Add(t);
+                }));
             }
 
-            for (var i = threadList.Count - 1; i > -1; i--)
+            foreach (var t in threadList.Select((Value, Index) => new { Index, Value }))
             {
-                var t = threadList[i];
-                t.Start();
-                while (!t.IsAlive)
+                t.Value.Start(t.Index);
+                while (!t.Value.IsAlive)
                 {
-                    break;
+                    continue;
                 }
             }
 
-            foreach (var t in threadList)
+            foreach (var i in threadStartFlagDic.Keys.OrderBy(i => i))
             {
-                t.Join();
+                threadStartFlagDic[i].Value = true;
             }
+            //foreach (var i in threadStartFlagDic.Keys.OrderByDescending(i => i))
+            //{
+            //    threadStartFlagDic[i].Value = true;
+            //}
+
+            threadList.ForEach(t => t.Join());
 
             var nodeList = new List<Node>();
             while (true)
@@ -104,6 +122,126 @@ namespace CommonLibTest.ThreadSafe
                     break;
                 }
 
+                nodeList.Add(node);
+            }
+
+            var nodeDic = new Dictionary<int, Node>();
+            foreach (var node in nodeList)
+            {
+                Assert.AreEqual(nodeDic.ContainsKey(node.Index), false);
+                nodeDic.Add(node.Index, node);
+            }
+
+            Assert.AreEqual(nodeList.Max(i => i.Index), nodeCount);
+            Assert.AreEqual(nodeList.Count, nodeCount);
+        }
+
+        [Test]
+        public void DefaultQueueTest()
+        {
+            const int threadCount = 10;
+            const int nodeCount = 100000;
+
+            var srcQueue = new Queue<Node>();
+            var destQueue = new Queue<Node>();
+
+            var threadStartFlagDic = new Dictionary<int, ThreadSafeBoolean>();
+            for (var i = 0; i < threadCount * 2; i++)
+            {
+                threadStartFlagDic.Add(i, new ThreadSafeBoolean(false));
+            }
+
+            var threadList = new List<Thread>();
+            for (var i = 0; i < threadCount; i++)
+            {
+                threadList.Add(new Thread(obj =>
+                {
+                    var index = (int)obj;
+                    while (!threadStartFlagDic[index].Value)
+                    {
+                        Thread.Sleep(0);
+                        continue;
+                    }
+
+                    var limit = nodeCount / threadCount;
+                    var count = 0;
+                    while (count < limit)
+                    {
+                        var node = new Node(this.getNextIndex(), DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss.fff"));
+                        srcQueue.Enqueue(node);
+                        count++;
+                    }
+                }));
+            }
+
+            for (var i = 0; i < threadCount; i++)
+            {
+                threadList.Add(new Thread(obj =>
+                {
+                    var index = (int)obj;
+                    while (!threadStartFlagDic[index].Value)
+                    {
+                        Thread.Sleep(0);
+                        continue;
+                    }
+
+                    var limit = nodeCount / threadCount;
+                    var count = 0;
+                    while (count < limit)
+                    {
+                        Node node;
+                        try
+                        {
+                            node = srcQueue.Dequeue();
+                        }
+                        catch (InvalidOperationException)
+                        {
+                            continue;
+                        }
+
+                        try
+                        {
+                            destQueue.Enqueue(node);
+                        }
+                        catch (Exception)
+                        {
+                            throw;
+                        }
+
+                        count++;
+                    }
+                }));
+            }
+
+            foreach (var t in threadList.Select((Value, Index) => new { Index, Value }))
+            {
+                t.Value.Start(t.Index);
+                while (!t.Value.IsAlive)
+                {
+                    continue;
+                }
+            }
+
+            foreach (var i in threadStartFlagDic.Keys.OrderBy(i => i))
+            {
+                threadStartFlagDic[i].Value = true;
+            }
+            //foreach (var i in threadStartFlagDic.Keys.OrderByDescending(i => i))
+            //{
+            //    threadStartFlagDic[i].Value = true;
+            //}
+
+            threadList.ForEach(t => t.Join());
+
+            var nodeList = new List<Node>();
+            while (true)
+            {
+                if (destQueue.Count == 0)
+                {
+                    break;
+                }
+
+                var node = destQueue.Dequeue();
                 nodeList.Add(node);
             }
 
