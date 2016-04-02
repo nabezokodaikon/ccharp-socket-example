@@ -83,7 +83,7 @@ namespace SocketClient.ConnectionIF
         {
             const string host = "localhost";
             const int port = 9000;
-            const int sendDataSize = 10;
+            const int writeDataSize = 10;
 
             Thread.CurrentThread.Name = "Com";
             log.Debug("通信スレッドが開始しました。");
@@ -152,7 +152,7 @@ namespace SocketClient.ConnectionIF
                                 {
                                     if (this.isShouldDisconnect.Value) return;
 
-                                    var buffer = bin.Skip(0).Take(sendDataSize).ToArray();
+                                    var buffer = bin.Skip(0).Take(writeDataSize).ToArray();
                                     stream.Write(buffer, 0, buffer.Length);
                                     offset += buffer.Length;
 
