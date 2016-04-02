@@ -10,6 +10,26 @@ namespace CommonLib.Command
         public static readonly int COMMAND_SIZE_DATA_SIZE = BitConverter.GetBytes(0).Length;
         public static readonly Encoding ENCODE = Encoding.GetEncoding("shift-jis");
 
+        public static int GetCommandSize(byte[] bin)
+        {
+            if (bin == null)
+            {
+                throw new ArgumentNullException("bin");
+            }
+
+            if (bin.Length < ExampleCommand.COMMAND_SIZE_DATA_SIZE)
+            {
+                throw new ArgumentException(string.Format(
+                    "{0}バイト以上のバイナリデータを指定してください。",
+                    ExampleCommand.COMMAND_SIZE_DATA_SIZE),
+                    "bin");
+            }
+
+            var commandSizeBuffer = bin.Take(ExampleCommand.COMMAND_SIZE_DATA_SIZE).ToArray();
+            var commandSize = BitConverter.ToInt32(commandSizeBuffer, 0);
+            return commandSize;
+        }
+
         public string Contents { get; private set; }
 
         public ExampleCommand(string contents)
@@ -55,12 +75,17 @@ namespace CommonLib.Command
         public byte[] ToBinary()
         {
             var contentsBuffer = ExampleCommand.ENCODE.GetBytes(this.Contents);
-            var commandSize = contentsBuffer.Length;
+            var commandSize = ExampleCommand.COMMAND_SIZE_DATA_SIZE + contentsBuffer.Length;
             var commandSizeBuffer = BitConverter.GetBytes(commandSize);
             var bin = new List<byte>();
             bin.AddRange(commandSizeBuffer);
             bin.AddRange(contentsBuffer);
             return bin.ToArray();
+        }
+
+        public override string ToString()
+        {
+            return string.Format(this.Contents);
         }
     }
 }

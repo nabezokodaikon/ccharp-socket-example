@@ -152,7 +152,7 @@ namespace SocketClient.ConnectionIF
                                 {
                                     if (this.isShouldDisconnect.Value) return;
 
-                                    var buffer = bin.Skip(0).Take(writeDataSize).ToArray();
+                                    var buffer = bin.Skip(offset).Take(writeDataSize).ToArray();
                                     stream.Write(buffer, 0, buffer.Length);
                                     offset += buffer.Length;
 
