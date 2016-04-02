@@ -84,6 +84,23 @@ namespace CommonLib.ThreadSafe
             return result;
         }
 
+        public IList<T> DequeueAll()
+        {
+            var list = new List<T>();
+            while (true)
+            {
+                var node = this.Dequeue();
+                if (node == null)
+                {
+                    break;
+                }
+
+                list.Add(node);
+            }
+
+            return list;
+        }
+
         public void Clear()
         {
             while (this.Dequeue() != null) { }
