@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Net;
 
 namespace SocketClient.ConnectionIF
 {
@@ -17,7 +18,7 @@ namespace SocketClient.ConnectionIF
 
         private Thread worker = null;
         private readonly ThreadSafeBoolean isShouldDisconnect = new ThreadSafeBoolean(false);
-        private readonly LockFreeQueue<ExampleCommand> commandQueue = new LockFreeQueue<ExampleCommand>();
+        private readonly LockFreeQueue<ExampleCommand> sendQueue = new LockFreeQueue<ExampleCommand>();
 
         public ClientConnection()
         {
@@ -64,7 +65,7 @@ namespace SocketClient.ConnectionIF
             }
 
             var command = new ExampleCommand(contents);
-            this.commandQueue.Enqueue(command);
+            this.sendQueue.Enqueue(command);
         }
 
         private bool isConnecting()
@@ -81,16 +82,20 @@ namespace SocketClient.ConnectionIF
 
         private void work()
         {
-            const string host = "localhost";
-            const int port = 9000;
+            const string localHost = "127.0.0.1";
+            const int localPort = 9001;
+            const string remoteHost = "127.0.0.1";
+            const int remotePort = 9000;
             const int writeDataSize = 10;
 
             Thread.CurrentThread.Name = "Com";
             log.Debug("通信スレッドが開始しました。");
 
+            var localEP = new IPEndPoint(IPAddress.Parse(localHost), localPort);
+
             try
             {
-                using (var client = new TcpClient())
+                using (var client = new TcpClient(localEP))
                 {
                     while (true)
                     {
@@ -98,7 +103,7 @@ namespace SocketClient.ConnectionIF
 
                         try
                         {
-                            client.Connect(host, port);
+                            client.Connect(remoteHost, remotePort);
                         }
                         catch (SocketException ex)
                         {
@@ -129,13 +134,13 @@ namespace SocketClient.ConnectionIF
 
                         log.Debug("ネットワークストリームを取得しました。");
 
-                        this.commandQueue.Clear();
+                        this.sendQueue.Clear();
 
                         while (true)
                         {
                             if (this.isShouldDisconnect.Value) return;
 
-                            var command = this.commandQueue.Dequeue();
+                            var command = this.sendQueue.Dequeue();
                             if (command == null)
                             {
                                 Thread.Sleep(1000);
